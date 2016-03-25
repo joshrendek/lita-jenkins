@@ -70,11 +70,28 @@ module Lita
         end
       end
 
+      def get_subjobs(job_url)
+        api_response = http(config.http_options).get("#{job_url}api/json") do |req|
+          req.headers = headers
+        end
+      end
+
       def jobs
         api_response = http(config.http_options).get(api_url) do |req|
           req.headers = headers
         end
-        JSON.parse(api_response.body)["jobs"]
+        job_arr = []
+        resp = JSON.parse(api_response.body)["jobs"]
+        resp.each do |job|
+          job_arr << job if job.has_key?('color')
+          unless job.has_key?('color')
+            subjobs = JSON.parse(get_subjobs(job['url']))
+            subjobs.each do |sj|
+              job_arr << sj
+            end
+          end
+        end
+        job_arr
       end
 
       private
