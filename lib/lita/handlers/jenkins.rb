@@ -30,7 +30,7 @@ module Lita
         params = input_params ? parse_params(input_params) : empty_params
 
         named_job_url = job_url(job['name'])
-        path = job_build_url(named_job_url, params)
+        path = job_build_url(job['url'], params)
 
         http_resp = http(config.http_options).post(path) do |req|
           req.headers = headers
@@ -74,6 +74,12 @@ module Lita
         api_response = http(config.http_options).get("#{job_url}api/json") do |req|
           req.headers = headers
         end
+        ret = []
+        JSON.parse(api_response.body)['jobs'].each do |job|
+          ret << job if job.key?('color')
+          ret << get_subjobs(job['url']) unless job.key?('color')
+        end
+        ret.flatten
       end
 
       def jobs
@@ -83,14 +89,10 @@ module Lita
         job_arr = []
         resp = JSON.parse(api_response.body)["jobs"]
         resp.each do |job|
-          job_arr << job if job.has_key?('color')
-          unless job.has_key?('color')
-            subjobs = JSON.parse(get_subjobs(job['url']))
-            subjobs.each do |sj|
-              job_arr << sj
-            end
-          end
+          job_arr << job if job.key?('color')
+          job_arr << get_subjobs(job['url']) unless job.key?('color')
         end
+        job_arr.flatten!
         job_arr
       end
 
